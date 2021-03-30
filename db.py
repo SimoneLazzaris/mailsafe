@@ -1,5 +1,5 @@
 import immudb.client
-import time,string,random,re
+import time,string,random,re,crypt,logging
 
 IMMUDB_USER="immudb"
 IMMUDB_PASS="immudb"
@@ -15,8 +15,14 @@ class db:
 	def __init__(self):
 		self.cli=immudb.client.ImmudbClient("{}:{}".format(IMMUDB_HOST,IMMUDB_PORT))
 		self.cli.login(IMMUDB_USER,IMMUDB_PASS)
+		self.t=time.time()
+		
+	def _refresh(self):
+		if time.time()-self.t>3000:
+			self.cli.login(IMMUDB_USER,IMMUDB_PASS)
 		
 	def validUser(self, username):
+		self._refresh()
 		k="USER:{}".format(username).encode('utf8')
 		try:
 			u=self.cli.safeGet(k)
@@ -25,19 +31,25 @@ class db:
 			return False
 		
 	def validLogin(self, username, password):
+		self._refresh()
 		k="USER:{}".format(username).encode('utf8')
 		try:
 			u=self.cli.safeGet(k)
-			return u.verified and u.value==password
-		except:
+			pw=password.decode('utf8')
+			val=u.value.decode('utf8')
+			return u.verified and val==crypt.crypt(pw,val)
+		except Exception as e:
+			logging.exception(e)
 			return False
 
 	def storeEmail(self, username, message):
+		self._refresh()
 		uniq="{}.{}".format(time.time(), rndstring(8))
 		k="MAIL:{}:{}:S{}".format(username, uniq,len(message))
 		self.cli.safeSet(k.encode('utf8'), message)
 
 	def listEmail(self, username):
+		self._refresh()
 		prefix="MAIL:{}:".format(username).encode('utf8')
 		ret=[]
 		prev=None
@@ -54,6 +66,7 @@ class db:
 		return ret
 
 	def getEmail(self, username, idx):
+		self._refresh()
 		prefix="MAIL:{}:".format(username).encode('utf8')
 		ret=[]
 		prev=None
