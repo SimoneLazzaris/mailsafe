@@ -19,7 +19,7 @@ class POP3Protocol(LineReceiver):
 			logging.warn("Unknown command")
 			self.sendLine("-ERR Unknown command.".encode('utf8'))
 			return
-		cmd=parms[0].decode('utf8').upper()
+		cmd=parms[0].decode('utf8','backslashreplace').upper()
 		if self.auth:
 			prefix="cmd_"
 		else:
@@ -45,7 +45,7 @@ class POP3Protocol(LineReceiver):
 		
 	def auth_USER(self, line):
 		try:
-			usr=line.split()[1].decode('utf8')
+			usr=line.split()[1].decode('utf8','backslashreplace')
 			self.user=usr
 			greeting="+OK Now enter your password".encode('utf8')
 			self.sendLine(greeting)
